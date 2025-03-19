@@ -132,7 +132,23 @@ class TestBigM(unittest.TestCase):
         steps, cache, solution, isOptimal, ans = BigM(input_data)
         
         self.assertFalse(isOptimal)
+    def test_1(self):
+        # Case with mixed signs and equality constraints
+        input_data = {
+            "max": False,
+            "model": np.array([
+                [1, 1, 1, 2],
+                [2, 1, 0, 3],
+                [2, 1, 3, 3],
+                [4, 4, 1, 0]
+            ]),
+            "sign": ["<=", "<=", ">="]
+        }
+        steps, cache, solution, isOptimal, ans = BigM(input_data)
         
+        self.assertTrue(isOptimal)
+        self.assertAlmostEqual(ans, 1.0)
+    
 
 if __name__ == '__main__':
     unittest.main()
