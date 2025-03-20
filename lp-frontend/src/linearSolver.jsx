@@ -16,6 +16,7 @@ const LinearProgrammingSolver = () => {
   // State for constraints and objective function
   const [constraints, setConstraints] = useState([]);
   const [objectiveFunctions, setObjectiveFunctions] = useState([]);
+  const [goalConstraints, setGoalConstraints] = useState([]);
   const [isMaximize, setIsMaximize] = useState(true);
   
   // Initialize matrices when dimensions are set
@@ -28,16 +29,27 @@ const LinearProgrammingSolver = () => {
     }));
     setConstraints(newConstraints);
     
-    // Initialize objective function(s)
-    const objFunctions = method === 'goalProgramming' 
-      ? Array(numGoals).fill().map(() => ({
-          coefficients: Array(numVariables).fill(0),
-          priority: 1
-        }))
-      : [{
-          coefficients: Array(numVariables).fill(0)
-        }];
-    setObjectiveFunctions(objFunctions);
+    if (method === 'goalProgramming') {
+      // Initialize goal constraints for goal programming
+      const newGoalConstraints = Array(numGoals).fill().map(() => ({
+        coefficients: Array(numVariables).fill(0),
+        operator: '=',
+        rhs: 0,
+        priority: 1
+      }));
+      setGoalConstraints(newGoalConstraints);
+      
+      // For goal programming, we don't use regular objective functions
+      setObjectiveFunctions([]);
+    } else {
+      // Initialize standard objective function
+      setObjectiveFunctions([{
+        coefficients: Array(numVariables).fill(0)
+      }]);
+      
+      // Clear goal constraints if not in goal programming mode
+      setGoalConstraints([]);
+    }
     
     setStep('input');
   };
@@ -64,26 +76,85 @@ const LinearProgrammingSolver = () => {
   };
   
   // Handle objective function coefficient change
-  const handleObjectiveChange = (objIdx, varIdx, value) => {
+  const handleObjectiveChange = (varIdx, value) => {
     const newObjectives = [...objectiveFunctions];
-    newObjectives[objIdx].coefficients[varIdx] = parseFloat(value) || 0;
+    newObjectives[0].coefficients[varIdx] = parseFloat(value) || 0;
     setObjectiveFunctions(newObjectives);
   };
   
+  // Handle goal constraint coefficient change
+  const handleGoalConstraintChange = (goalIdx, varIdx, value) => {
+    const newGoalConstraints = [...goalConstraints];
+    newGoalConstraints[goalIdx].coefficients[varIdx] = parseFloat(value) || 0;
+    setGoalConstraints(newGoalConstraints);
+  };
+  
+  // Handle goal constraint operator change
+  const handleGoalOperatorChange = (goalIdx, operator) => {
+    const newGoalConstraints = [...goalConstraints];
+    newGoalConstraints[goalIdx].operator = operator;
+    setGoalConstraints(newGoalConstraints);
+  };
+  
+  // Handle goal constraint RHS change
+  const handleGoalRhsChange = (goalIdx, value) => {
+    const newGoalConstraints = [...goalConstraints];
+    newGoalConstraints[goalIdx].rhs = parseFloat(value) || 0;
+    setGoalConstraints(newGoalConstraints);
+  };
+  
   // Handle priority change for goal programming
-  const handlePriorityChange = (objIdx, value) => {
-    const newObjectives = [...objectiveFunctions];
-    newObjectives[objIdx].priority = parseInt(value) || 1;
-    setObjectiveFunctions(newObjectives);
+  const handlePriorityChange = (goalIdx, value) => {
+    const newGoalConstraints = [...goalConstraints];
+    newGoalConstraints[goalIdx].priority = parseInt(value) || 1;
+    setGoalConstraints(newGoalConstraints);
   };
   
   // Solve the LP problem (placeholder)
   const solveLP = () => {
-    // Here you would implement or call your LP solver
-    console.log("Solving LP with method:", method);
-    console.log("Constraints:", constraints);
-    console.log("Objective Functions:", objectiveFunctions);
-    console.log("Maximize:", isMaximize);
+    // Construct the JSON payload for the backend
+    const payload = {
+      method: method,
+      numVariables: numVariables,
+      numConstraints: numConstraints,
+      constraints: constraints.map(constraint => ({
+        coefficients: [...constraint.coefficients],
+        operator: constraint.operator,
+        rhs: constraint.rhs
+      }))
+    };
+    
+    if (method === 'goalProgramming') {
+      // Add goal programming specific data
+      payload.numGoals = numGoals;
+      payload.goals = goalConstraints.map(goal => ({
+        coefficients: [...goal.coefficients],
+        operator: goal.operator,
+        rhs: goal.rhs,
+        priority: goal.priority
+      }));
+    } else {
+      // Add standard objective function data
+      payload.optimization = isMaximize ? 'maximize' : 'minimize';
+      payload.objective = {
+        coefficients: [...objectiveFunctions[0].coefficients]
+      };
+    }
+    
+    // Log the payload (for testing)
+    console.log("JSON Payload for backend:", payload);
+    console.log("JSON String:", JSON.stringify(payload));
+    
+    // Here you would send the payload to your backend
+    // Example:
+    // axios.post('/api/solveLP', payload)
+    //   .then(response => {
+    //     // Handle response
+    //     console.log("Solution:", response.data);
+    //   })
+    //   .catch(error => {
+    //     console.error("Error solving LP:", error);
+    //   });
     
     // For now, just switch to result view
     setStep('result');
@@ -143,27 +214,29 @@ const LinearProgrammingSolver = () => {
         </div>
       )}
       
-      <div className="form-group">
-        <label>Optimization:</label>
-        <div className="radio-group">
-          <label className="radio-label">
-            <input 
-              type="radio" 
-              checked={isMaximize} 
-              onChange={() => setIsMaximize(true)}
-            />
-            Maximize
-          </label>
-          <label className="radio-label">
-            <input 
-              type="radio" 
-              checked={!isMaximize} 
-              onChange={() => setIsMaximize(false)}
-            />
-            Minimize
-          </label>
+      {method !== 'goalProgramming' && (
+        <div className="form-group">
+          <label>Optimization:</label>
+          <div className="radio-group">
+            <label className="radio-label">
+              <input 
+                type="radio" 
+                checked={isMaximize} 
+                onChange={() => setIsMaximize(true)}
+              />
+              Maximize
+            </label>
+            <label className="radio-label">
+              <input 
+                type="radio" 
+                checked={!isMaximize} 
+                onChange={() => setIsMaximize(false)}
+              />
+              Minimize
+            </label>
+          </div>
         </div>
-      </div>
+      )}
       
       <div className="btn-container">
         <button 
@@ -176,49 +249,91 @@ const LinearProgrammingSolver = () => {
     </div>
   );
   
+  // Render standard objective function
+  const renderStandardObjective = () => (
+    <div className="section-card">
+      <h3>
+        {isMaximize ? "Maximize" : "Minimize"} Objective Function
+      </h3>
+      
+      <div className="coefficient-group">
+        {objectiveFunctions[0].coefficients.map((coef, varIdx) => (
+          <div key={`obj-var-${varIdx}`} className="coefficient-item">
+            {varIdx > 0 && <span style={{margin: '0 0.25rem'}}>+</span>}
+            <input 
+              type="number" 
+              className="coefficient-input"
+              value={coef !== 0 ? coef : ''}
+              onChange={(e) => handleObjectiveChange(varIdx, e.target.value)}
+            />
+            <span style={{marginLeft: '0.25rem'}}>x<sub>{varIdx+1}</sub></span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+  
+  // Render goal programming objectives
+  const renderGoalObjectives = () => (
+    <div className="section-card">
+      <h3>Goal Constraints</h3>
+      
+      {goalConstraints.map((goal, goalIdx) => (
+        <div key={`goal-${goalIdx}`} style={{marginBottom: '1.5rem'}}>
+          <div style={{display: 'flex', alignItems: 'center', marginBottom: '0.5rem'}}>
+            <span style={{marginRight: '0.5rem', fontWeight: '500'}}>Priority:</span>
+            <input 
+              type="number" 
+              min="1"
+              className="coefficient-input"
+              value={goal.priority}
+              onChange={(e) => handlePriorityChange(goalIdx, e.target.value)}
+            />
+          </div>
+          
+          <div className="coefficient-group">
+            {goal.coefficients.map((coef, varIdx) => (
+              <div key={`goal-${goalIdx}-var-${varIdx}`} className="coefficient-item">
+                {varIdx > 0 && <span style={{margin: '0 0.25rem'}}>+</span>}
+                <input 
+                  type="number" 
+                  className="coefficient-input"
+                  value={coef !== 0 ? coef : ''}
+                  onChange={(e) => handleGoalConstraintChange(goalIdx, varIdx, e.target.value)}
+                />
+                <span style={{marginLeft: '0.25rem'}}>x<sub>{varIdx+1}</sub></span>
+              </div>
+            ))}
+            
+            <select 
+              className="operator-select"
+              value={goal.operator}
+              onChange={(e) => handleGoalOperatorChange(goalIdx, e.target.value)}
+            >
+              <option value="=">═</option>
+              <option value="<=">≤</option>
+              <option value=">=">≥</option>
+            </select>
+            
+            <input 
+              type="number" 
+              className="coefficient-input"
+              value={goal.rhs}
+              onChange={(e) => handleGoalRhsChange(goalIdx, e.target.value)}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+  
   // Render input matrices
   const renderInputMatrices = () => (
     <div className="lp-solver-card">
       <h2>Input Linear Programming Problem</h2>
       
       {/* Objective Function(s) */}
-      <div className="section-card">
-        <h3>
-          {isMaximize ? "Maximize" : "Minimize"} {method === 'goalProgramming' ? "Goals" : "Objective Function"}
-        </h3>
-        
-        {objectiveFunctions.map((objFunc, objIdx) => (
-          <div key={`obj-${objIdx}`} style={{marginBottom: '1rem'}}>
-            {method === 'goalProgramming' && (
-              <div style={{display: 'flex', alignItems: 'center', marginBottom: '0.5rem'}}>
-                <span style={{marginRight: '0.5rem', fontWeight: '500'}}>Priority:</span>
-                <input 
-                  type="number" 
-                  min="1"
-                  className="coefficient-input"
-                  value={objFunc.priority}
-                  onChange={(e) => handlePriorityChange(objIdx, e.target.value)}
-                />
-              </div>
-            )}
-            
-            <div className="coefficient-group">
-              {objFunc.coefficients.map((coef, varIdx) => (
-                <div key={`obj-${objIdx}-var-${varIdx}`} className="coefficient-item">
-                  {varIdx > 0 && <span style={{margin: '0 0.25rem'}}>+</span>}
-                  <input 
-                    type="number" 
-                    className="coefficient-input"
-                    value={coef !== 0 ? coef : ''}
-                    onChange={(e) => handleObjectiveChange(objIdx, varIdx, e.target.value)}
-                  />
-                  <span style={{marginLeft: '0.25rem'}}>x<sub>{varIdx+1}</sub></span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      {method === 'goalProgramming' ? renderGoalObjectives() : renderStandardObjective()}
       
       {/* Constraints */}
       <div className="section-card">
