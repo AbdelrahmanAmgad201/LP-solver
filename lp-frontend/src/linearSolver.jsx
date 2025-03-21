@@ -19,6 +19,9 @@ const LinearProgrammingSolver = () => {
   const [goalConstraints, setGoalConstraints] = useState([]);
   const [isMaximize, setIsMaximize] = useState(true);
   
+  // State for non-negative variables
+  const [allNonNegative, setAllNonNegative] = useState(true);
+  
   // Initialize matrices when dimensions are set
   const initializeMatrices = () => {
     // Initialize constraints matrix
@@ -117,6 +120,7 @@ const LinearProgrammingSolver = () => {
       method: method,
       numVariables: numVariables,
       numConstraints: numConstraints,
+      allNonNegative: allNonNegative,
       constraints: constraints.map(constraint => ({
         coefficients: [...constraint.coefficients],
         operator: constraint.operator,
@@ -237,6 +241,19 @@ const LinearProgrammingSolver = () => {
           </div>
         </div>
       )}
+      
+      <div className="form-group">
+        <div className="checkbox-container">
+          <label className="checkbox-label">
+            <input 
+              type="checkbox" 
+              checked={allNonNegative} 
+              onChange={() => setAllNonNegative(!allNonNegative)}
+            />
+            All variables non-negative
+          </label>
+        </div>
+      </div>
       
       <div className="btn-container">
         <button 
