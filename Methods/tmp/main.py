@@ -5,55 +5,50 @@ from SimplexSolver import SimplexSolver
 from BigM import BigM
 from outputDTO import SolverOutputDTO
 
-from flask import Flask, jsonify
+from flask import Flask,request, jsonify
+from flask_cors import CORS
+import json
 
 app = Flask(__name__)
+CORS(app)
 @app.route('/solve', methods=['POST'])
 def solve():
-    json_str = request.json
+    json_data = request.get_json()
+    
+   
+    json_str = json.dumps(json_data)
+    
     solver_input = LinearSolverInput.from_json(json_str)
     
     tableau = TableauBuilder.build_tableau(solver_input)
-    
+    print(solver_input.method )
+    output_dto = None
     if solver_input.method == "twoPhase" :
         msg, tableau = TwoPhaseMethod.phase_one(tableau)
         obj_fun = TableauBuilder.build_objective(tableau, solver_input)
         if msg == "optimal":
             TwoPhaseMethod.phase_two(tableau, obj_fun)
-    elif solver_input.method == "BigM" :
+    elif solver_input.method == "bigM" :
         
         
         input = {"max" : True if solver_input.optimization == "maximize" else False
                 ,"model" : tableau 
-                ,"obj_fun" : solver_input.objectives[0].coefficients} 
+                ,"obj_fun" : solver_input.objective.coefficients} 
         steps, cache, solution, isOptimal, ans = BigM(input)
         output_dto = SolverOutputDTO(
             steps=steps,
             cache=cache,
             solution=solution,
-            is_optimal=isOptimal,
+            is_optimal="true" if isOptimal else "false",
             optimal_value=ans,
-            
+            message="Solution found successfully" if isOptimal else "No optimal solution found"
         )
-        """if not steps:
-            print("No valid solution found.")
-        else:
-            print("Steps:")
-            for step in steps:
-                print(step)
-
-            print("\nCache:")
-            for i, iteration in enumerate(cache):
-                print(f"Iteration {i+1}:")
-                for row in iteration:
-                    print("\t".join(map(str, row)))
-
-            print("\nSolution:", solution)
-            print("Is Optimal:", isOptimal)
-            print("Optimal Value:", ans)"""
-    elif solver_input.method == "Simplex":
+        print("Output DTO created:", output_dto)
+        
+    elif solver_input.method == "simplex":
+        
         solver = SimplexSolver(tableau,
-                            solver_input.objectives[0].coefficients,
+                            solver_input.objective.coefficients,
                             is_min=False if solver_input.optimization == "maximize" else True)
         steps, cache, solution, isOptimal, ans = solver.solve()
 
@@ -61,27 +56,13 @@ def solve():
             steps=steps,
             cache=cache,
             solution=solution,
-            is_optimal=isOptimal,
+            is_optimal="true" if isOptimal else "false",
             optimal_value=ans,
-
+            message="Solution found successfully" if isOptimal else "No optimal solution found"
         )
-        """if not steps:
-            print("No valid solution found.")
-        else:
-            print("Steps:")
-            for step in steps:
-                print(step)
-
-            print("\nCache:")
-            for i, iteration in enumerate(cache):
-                print(f"Iteration {i+1}:")
-                for row in iteration:
-                    print("\t".join(map(str, row)))
-
-            print("\nSolution:", solution)
-            print("Is Optimal:", isOptimal)
-            print("Optimal Value:", ans)"""
-    return jsonify(output_dto.__dict__)   
+        print("Output DTO created:", output_dto)
+        
+    return jsonify(output_dto.to_dict())   
 
 
 

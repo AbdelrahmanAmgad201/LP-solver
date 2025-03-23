@@ -148,19 +148,28 @@ const LinearProgrammingSolver = () => {
     // Log the payload (for testing)
     console.log("JSON Payload for backend:", payload);
     console.log("JSON String:", JSON.stringify(payload));
+    fetch('http://127.0.0.1:5000/solve', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Steps:', data.steps);
+        console.log('Cache:', data.cache);
+        console.log('Solution:', data.solution);
+        console.log('Is Optimal:', data.is_optimal);
+        console.log('Optimal Value:', data.optimal_value);
+        console.log('Message:', data.message);
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+      });
+      
     
-    // Here you would send the payload to your backend
-    // Example:
-    // axios.post('/api/solveLP', payload)
-    //   .then(response => {
-    //     // Handle response
-    //     console.log("Solution:", response.data);
-    //   })
-    //   .catch(error => {
-    //     console.error("Error solving LP:", error);
-    //   });
     
-    // For now, just switch to result view
     setStep('result');
   };
   
