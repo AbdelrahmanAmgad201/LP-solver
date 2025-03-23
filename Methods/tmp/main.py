@@ -3,55 +3,14 @@ from tableauBuilder import TableauBuilder
 from twoPhaseMethod import TwoPhaseMethod
 from SimplexSolver import SimplexSolver
 from BigM import BigM
+from outputDTO import SolverOutputDTO
 
-def main():
-    p1 = """
-    {"method":"twoPhase", "numVariables":2, "numConstraints":3, "optimization":"minimize", 
-    "constraints":
-    [
-        {"coefficients":[0.5,0.25], "operator":"<=", "rhs":4}, 
-        {"coefficients":[1,3], "operator":">=", "rhs":20},
-        {"coefficients":[1,1], "operator":"=", "rhs":10}
-    ], 
-    "objectives":[{"coefficients":[2,3]}]}
-    """
-    
-    p2 = """
-        {
-            "method": "BigM",
-            "numVariables": 3,
-            "numConstraints": 3,
-            "optimization": "minimize",
-            "constraints": [
-                {"coefficients": [1, 1, 1], "operator": "<=", "rhs": 3},
-                {"coefficients": [2, 1, 0], "operator": "<=", "rhs": 6},
-                {"coefficients": [2, 1, 3], "operator": ">=", "rhs": 4}
-            ],
-            "objectives": [
-                {"coefficients": [4, 4, 1]}
-            ]
-        }
-    """
-    p3 = """
-        {
-            "method": "Simplex",
-            "numVariables": 4,
-            "numConstraints": 3,
-            "optimization": "minimize",
-            "constraints": [
-                {"coefficients": [1, 2, 2, 4], "operator": "<=", "rhs": 40},
-                {"coefficients": [ 2, -1, 1, 2], "operator": "<=", "rhs": 8},
-                {"coefficients": [4, -2, 1, -1], "operator": "<=", "rhs": 10}
-            ],
-            "objectives": [
-                {"coefficients": [5, -4, 6, -8]}
-            ]
-        }
-    """
-    solve(p3)
+from flask import Flask, jsonify
 
-
-def solve(json_str):
+app = Flask(__name__)
+@app.route('/solve', methods=['POST'])
+def solve():
+    json_str = request.json
     solver_input = LinearSolverInput.from_json(json_str)
     
     tableau = TableauBuilder.build_tableau(solver_input)
@@ -68,7 +27,15 @@ def solve(json_str):
                 ,"model" : tableau 
                 ,"obj_fun" : solver_input.objectives[0].coefficients} 
         steps, cache, solution, isOptimal, ans = BigM(input)
-        if not steps:
+        output_dto = SolverOutputDTO(
+            steps=steps,
+            cache=cache,
+            solution=solution,
+            is_optimal=isOptimal,
+            optimal_value=ans,
+            
+        )
+        """if not steps:
             print("No valid solution found.")
         else:
             print("Steps:")
@@ -83,14 +50,22 @@ def solve(json_str):
 
             print("\nSolution:", solution)
             print("Is Optimal:", isOptimal)
-            print("Optimal Value:", ans)
+            print("Optimal Value:", ans)"""
     elif solver_input.method == "Simplex":
         solver = SimplexSolver(tableau,
                             solver_input.objectives[0].coefficients,
                             is_min=False if solver_input.optimization == "maximize" else True)
         steps, cache, solution, isOptimal, ans = solver.solve()
 
-        if not steps:
+        output_dto = SolverOutputDTO(
+            steps=steps,
+            cache=cache,
+            solution=solution,
+            is_optimal=isOptimal,
+            optimal_value=ans,
+
+        )
+        """if not steps:
             print("No valid solution found.")
         else:
             print("Steps:")
@@ -105,10 +80,10 @@ def solve(json_str):
 
             print("\nSolution:", solution)
             print("Is Optimal:", isOptimal)
-            print("Optimal Value:", ans)
-       
+            print("Optimal Value:", ans)"""
+    return jsonify(output_dto.__dict__)   
 
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    app.run(debug=True)
