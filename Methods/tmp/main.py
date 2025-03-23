@@ -21,7 +21,7 @@ def solve():
     solver_input = LinearSolverInput.from_json(json_str)
     
     tableau = TableauBuilder.build_tableau(solver_input)
-    print(solver_input.method )
+    
     output_dto = None
     if solver_input.method == "twoPhase" :
         msg, tableau = TwoPhaseMethod.phase_one(tableau)
@@ -60,7 +60,7 @@ def solve():
             optimal_value=ans,
             message="Solution found successfully" if isOptimal else "No optimal solution found"
         )
-        print("Output DTO created:", output_dto)
+        
         
     return jsonify(output_dto.to_dict())   
 
