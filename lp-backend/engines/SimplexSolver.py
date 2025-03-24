@@ -10,9 +10,8 @@ class SimplexSolver:
         self.steps = []
         self.iterations = []
         
-        if is_min:
-            self.z = -self.z  
         
+        self.z = -self.z  
        
         self.tableau = np.vstack([self.tableau, self.z])  
 

@@ -28,28 +28,6 @@ const TableauRenderer = ({ tableau, step }) => {
     </div>
   );
 };
-const downloadSolution = (solutionData) => {
-  if (!solutionData) return;
-  
-  // Create a blob with the solution data
-  const blob = new Blob([JSON.stringify(solutionData, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  
-  // Create a temporary anchor element to trigger the download
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'linear_programming_solution.json';
-  document.body.appendChild(a);
-  a.click();
-  
-  // Clean up
-  setTimeout(() => {
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 100);
-  
-};
-
 
 // Updated renderResults function to properly display solution, message, and tableaus
 const renderResults = (data, onBack) => {
@@ -109,9 +87,6 @@ const renderResults = (data, onBack) => {
       <div className="btn-container">
         <button onClick={onBack} className="btn btn-secondary">
           Back to Input
-        </button>
-        <button onClick={downloadSolution(data)} className="btn btn-primary">
-          Download Solution
         </button>
       </div>
     </div>
@@ -292,7 +267,6 @@ const LinearProgrammingSolver = () => {
         setIsLoading(false);
       });
   };
-  
   
   // Render problem setup form
   const renderSetup = () => (
