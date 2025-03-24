@@ -1,27 +1,38 @@
 class Simplex:
     EPSILON = 1e-15  # Tolerance for floating-point comparisons
-
+    # zs is the array of objectives
+    
     @staticmethod
-    def check_unbounded(tableau, z):
-        for i in range(1, len(z)-1):
-            if z[i] <= Simplex.EPSILON:
-                continue
-            flag = True
-            for j in range(1, len(tableau)):
-                if tableau[j][i] > Simplex.EPSILON:
-                    flag = False
-                    break
-            if flag:
-                return True
+    def check_unbounded(tableau, zs):
+        for z in zs:
+            for i in range(1, len(z)-1):
+                if z[i] <= Simplex.EPSILON:
+                    continue
+                flag = True
+                for j in range(1, len(tableau)):
+                    if tableau[j][i] > Simplex.EPSILON:
+                        flag = False
+                        break
+                if flag:
+                    return True
 
     @staticmethod     
-    def get_entering_var(z):
+    def get_entering_var(zs):
         x = -1
         mx = Simplex.EPSILON
-        for i in range(1, len(z)-1):
-            if z[i] > mx:
-                mx = z[i]
-                x = i
+        dropped_cols = []
+        for z in zs:
+            for i in range(1, len(z)-1):
+                if (i not in dropped_cols) and z[i] < -Simplex.EPSILON:
+                    dropped_cols.append(i)
+
+        for z in range(len(zs)):
+            for i in range(1, len(zs[z])-1):
+                if zs[z][i] > mx and (i not in dropped_cols):
+                    mx = zs[z][i]
+                    x = i
+            if x != -1: return x
+
         return x
 
     @staticmethod
@@ -44,7 +55,7 @@ class Simplex:
         return x
     
     @staticmethod
-    def make_consistent(tableau, z):
+    def make_consistent(tableau, zs):
         for row in range(1, len(tableau)):
             col = -1
             for i in range(len(tableau[0])):
@@ -56,9 +67,10 @@ class Simplex:
             for i in range(1, len(tableau[0])):
                 tableau[row][i] /= pivot
 
-            m = z[col] / tableau[row][col]
-            for j in range(1, len(z)):
-                z[j] -= m * tableau[row][j]
+            for z in range(len(zs)):
+                m = zs[z][col] / tableau[row][col]
+                for j in range(1, len(zs[z])):
+                    zs[z][j] -= m * tableau[row][j]
         
             for i in range(1, len(tableau)):
                 if i == row:
@@ -69,11 +81,11 @@ class Simplex:
         
 
     @staticmethod
-    def iterate_once(tableau, z):
-        if Simplex.check_unbounded(tableau, z):
+    def iterate_once(tableau, zs):
+        if Simplex.check_unbounded(tableau, zs):
             return "unbounded"
         
-        enter_var_idx = Simplex.get_entering_var(z)
+        enter_var_idx = Simplex.get_entering_var(zs)
         if enter_var_idx == -1:
             if Simplex.check_infeasible(tableau):
                 return "infeasible"
@@ -84,13 +96,15 @@ class Simplex:
         if leave_var_idx == -1:
             return "unbounded"
         
+        step = f'Entering variable: {tableau[0][enter_var_idx]}, Leaving variable: {tableau[leave_var_idx][0]}'
         tableau[leave_var_idx][0] = tableau[0][enter_var_idx]
 
-        Simplex.make_consistent(tableau, z)
+        Simplex.make_consistent(tableau, zs)
 
-        enter_var_idx = Simplex.get_entering_var(z)
+        enter_var_idx = Simplex.get_entering_var(zs)
+        msg = None
         if enter_var_idx == -1:
             if Simplex.check_infeasible(tableau):
-                return "infeasible"
-            return "optimal"
-        return None
+                msg = "infeasible"
+            msg = "optimal"
+        return msg, step
