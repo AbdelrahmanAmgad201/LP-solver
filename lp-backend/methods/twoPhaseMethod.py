@@ -56,8 +56,9 @@ class TwoPhaseMethod:
             # remove artificial variable columns
             remove_indices = [i for i, col in enumerate(tableau[0]) if isinstance(col, str) and col.startswith('a')]
             filtered_tableau = [[row[i] for i in range(len(row)) if i not in remove_indices] for row in tableau]
+            filtered_r = [[row[i] for i in range(len(row)) if i not in remove_indices] for row in r]
             steps.append("removing artifitial variables")
-            tableaus.append(copy.deepcopy(filtered_tableau))
+            tableaus.append(TwoPhaseMethod.combine_tableau_objective(copy.deepcopy(filtered_tableau), filtered_r))
 
         return msg, steps, tableaus
 

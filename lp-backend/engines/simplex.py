@@ -124,3 +124,10 @@ class Simplex:
                     break
 
         return sol
+
+    @staticmethod
+    def detect_artificial_variable(tableau):
+        for i in range(len(tableau)):
+            if tableau[i][0][0] == 'a':
+                return True
+        return False
