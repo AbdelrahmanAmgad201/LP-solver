@@ -1,4 +1,4 @@
-from simplex import Simplex
+from engines.simplex import Simplex
 class TwoPhaseMethod:
     @staticmethod
     def create_r(tableau):
