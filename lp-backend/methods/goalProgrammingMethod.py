@@ -18,7 +18,7 @@ class GoalProgrammingMethod:
             tableaus += phase1_tableaus
             tableau = tableaus[-1][0:1] + tableaus[-1][2:]
 
-        if msg == "optimal":
+        if msg == "optimal" or msg == None:
             msg = None
             objectives = TableauBuilder.build_goal_objectives(tableau, solver_input)
             steps.append("creating tableau")
