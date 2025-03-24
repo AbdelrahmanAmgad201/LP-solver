@@ -1,26 +1,116 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './linearSolver.css';
 
-const LinearProgrammingSolver = () => {
-  // State for method selection
-  const [method, setMethod] = useState('simplex');
+// New component for rendering tableaus
+const TableauRenderer = ({ tableau, step }) => {
+  if (!tableau || !tableau.length) return null;
   
-  // State for problem dimensions
+  return (
+    <div className="tableau-container">
+      <div className="tableau-step">
+        <span className="step-label">Step:</span> {step}
+      </div>
+      <div className="tableau-wrapper">
+        <table className="tableau-table">
+          <tbody>
+            {tableau.map((row, rowIdx) => (
+              <tr key={`row-${rowIdx}`}>
+                {row.map((cell, cellIdx) => (
+                  <td key={`cell-${rowIdx}-${cellIdx}`}>
+                    {typeof cell === 'number' ? cell.toFixed(2) : cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// Updated renderResults function to properly display solution, message, and tableaus
+const renderResults = (data, onBack) => {
+  const { solution, steps, cache, message } = data;
+
+  return (
+    <div className="lp-solver-card results-card">
+      <h2>Linear Programming Solution</h2>
+
+      {/* Solution Status Message */}
+      <div className="solution-summary">
+        <h3>Solution Status:</h3>
+        <div className="solution-message">{message}</div>
+      </div>
+
+      {/* Solution Variables Table */}
+      {solution && solution.length === 1 && solution[0].length === 2 && (
+        <div className="solution-variables">
+          <h3>Variable Values:</h3>
+          <table className="variables-table">
+            <thead>
+              <tr>
+                {solution[0][0].map((varName, idx) => (
+                  <th key={`var-${idx}`}>{varName}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {solution[0][1].map((value, idx) => (
+                  <td key={`val-${idx}`}>
+                    {typeof value === 'number' ? value.toFixed(4) : value}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Tableaus */}
+      {cache && cache.length > 0 && (
+        <div className="tableaus-container">
+          <h3>Tableaux Steps:</h3>
+          <div className="tableaus-list">
+            {cache.map((tableau, idx) => (
+              <TableauRenderer
+                key={`tableau-${idx}`}
+                tableau={tableau}
+                step={steps[idx] || `Step ${idx + 1}`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="btn-container">
+        <button onClick={onBack} className="btn btn-secondary">
+          Back to Input
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Updated LinearProgrammingSolver component
+const LinearProgrammingSolver = () => {
+  // States for problem setup
+  const [method, setMethod] = useState('simplex');
   const [numVariables, setNumVariables] = useState(2);
   const [numConstraints, setNumConstraints] = useState(2);
   const [numGoals, setNumGoals] = useState(1);
-  
-  // State for setup step
-  const [step, setStep] = useState('setup'); // 'setup', 'input', 'result'
-  
-  // State for constraints and objective function
+  const [step, setStep] = useState('setup');
   const [constraints, setConstraints] = useState([]);
   const [objectiveFunctions, setObjectiveFunctions] = useState([]);
   const [goalConstraints, setGoalConstraints] = useState([]);
   const [isMaximize, setIsMaximize] = useState(true);
-  
-  // State for non-negative variables
   const [allNonNegative, setAllNonNegative] = useState(true);
+  
+  // States for solution
+  const [solutionData, setSolutionData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   // Initialize matrices when dimensions are set
   const initializeMatrices = () => {
@@ -60,7 +150,8 @@ const LinearProgrammingSolver = () => {
   // Handle constraint coefficient change
   const handleConstraintChange = (constraintIdx, varIdx, value) => {
     const newConstraints = [...constraints];
-    newConstraints[constraintIdx].coefficients[varIdx] = parseFloat(value) || 0;
+    // Allow explicitly setting to 0 or empty string (which will be treated as 0)
+    newConstraints[constraintIdx].coefficients[varIdx] = value === '' ? 0 : parseFloat(value) || 0;
     setConstraints(newConstraints);
   };
   
@@ -74,21 +165,21 @@ const LinearProgrammingSolver = () => {
   // Handle RHS change
   const handleRhsChange = (constraintIdx, value) => {
     const newConstraints = [...constraints];
-    newConstraints[constraintIdx].rhs = parseFloat(value) || 0;
+    newConstraints[constraintIdx].rhs = value === '' ? 0 : parseFloat(value) || 0;
     setConstraints(newConstraints);
   };
   
   // Handle objective function coefficient change
   const handleObjectiveChange = (varIdx, value) => {
     const newObjectives = [...objectiveFunctions];
-    newObjectives[0].coefficients[varIdx] = parseFloat(value) || 0;
+    newObjectives[0].coefficients[varIdx] = value === '' ? 0 : parseFloat(value) || 0;
     setObjectiveFunctions(newObjectives);
   };
   
   // Handle goal constraint coefficient change
   const handleGoalConstraintChange = (goalIdx, varIdx, value) => {
     const newGoalConstraints = [...goalConstraints];
-    newGoalConstraints[goalIdx].coefficients[varIdx] = parseFloat(value) || 0;
+    newGoalConstraints[goalIdx].coefficients[varIdx] = value === '' ? 0 : parseFloat(value) || 0;
     setGoalConstraints(newGoalConstraints);
   };
   
@@ -102,19 +193,24 @@ const LinearProgrammingSolver = () => {
   // Handle goal constraint RHS change
   const handleGoalRhsChange = (goalIdx, value) => {
     const newGoalConstraints = [...goalConstraints];
-    newGoalConstraints[goalIdx].rhs = parseFloat(value) || 0;
+    newGoalConstraints[goalIdx].rhs = value === '' ? 0 : parseFloat(value) || 0;
     setGoalConstraints(newGoalConstraints);
   };
   
   // Handle priority change for goal programming
   const handlePriorityChange = (goalIdx, value) => {
     const newGoalConstraints = [...goalConstraints];
-    newGoalConstraints[goalIdx].priority = parseInt(value) || 1;
+    newGoalConstraints[goalIdx].priority = value === '' ? 1 : parseInt(value) || 1;
     setGoalConstraints(newGoalConstraints);
   };
   
-  // Solve the LP problem (placeholder)
+  // Solve the linear programming problem
   const solveLP = () => {
+    // Reset states
+    setIsLoading(true);
+    setError(null);
+    setSolutionData(null);
+    
     // Construct the JSON payload for the backend
     const payload = {
       method: method,
@@ -145,9 +241,6 @@ const LinearProgrammingSolver = () => {
       };
     }
     
-    // Log the payload (for testing)
-    console.log("JSON Payload for backend:", payload);
-    console.log("JSON String:", JSON.stringify(payload));
     fetch('http://127.0.0.1:5000/solve', {
       method: 'POST',
       headers: {
@@ -155,22 +248,24 @@ const LinearProgrammingSolver = () => {
       },
       body: JSON.stringify(payload),
     })
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
       .then(data => {
-        console.log('Steps:', data.steps);
-        console.log('Cache:', data.cache);
-        console.log('Solution:', data.solution);
-        console.log('Is Optimal:', data.is_optimal);
-        console.log('Optimal Value:', data.optimal_value);
-        console.log('Message:', data.message);
+        console.log('Solution data:', data);
+        setSolutionData(data);
+        setStep('result');
       })
       .catch((error) => {
         console.error('Error:', error);
+        setError(error.message);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-      
-    
-    
-    setStep('result');
   };
   
   // Render problem setup form
@@ -290,6 +385,7 @@ const LinearProgrammingSolver = () => {
               type="number" 
               className="coefficient-input"
               value={coef !== 0 ? coef : ''}
+              placeholder="0"
               onChange={(e) => handleObjectiveChange(varIdx, e.target.value)}
             />
             <span style={{marginLeft: '0.25rem'}}>x<sub>{varIdx+1}</sub></span>
@@ -325,6 +421,7 @@ const LinearProgrammingSolver = () => {
                   type="number" 
                   className="coefficient-input"
                   value={coef !== 0 ? coef : ''}
+                  placeholder="0"
                   onChange={(e) => handleGoalConstraintChange(goalIdx, varIdx, e.target.value)}
                 />
                 <span style={{marginLeft: '0.25rem'}}>x<sub>{varIdx+1}</sub></span>
@@ -344,7 +441,8 @@ const LinearProgrammingSolver = () => {
             <input 
               type="number" 
               className="coefficient-input"
-              value={goal.rhs}
+              value={goal.rhs !== 0 ? goal.rhs : ''}
+              placeholder="0"
               onChange={(e) => handleGoalRhsChange(goalIdx, e.target.value)}
             />
           </div>
@@ -374,6 +472,7 @@ const LinearProgrammingSolver = () => {
                   type="number" 
                   className="coefficient-input"
                   value={coef !== 0 ? coef : ''}
+                  placeholder="0"
                   onChange={(e) => handleConstraintChange(constraintIdx, varIdx, e.target.value)}
                 />
                 <span style={{marginLeft: '0.25rem'}}>x<sub>{varIdx+1}</sub></span>
@@ -398,7 +497,8 @@ const LinearProgrammingSolver = () => {
             <input 
               type="number" 
               className="coefficient-input"
-              value={constraint.rhs}
+              value={constraint.rhs !== 0 ? constraint.rhs : ''}
+              placeholder="0"
               onChange={(e) => handleRhsChange(constraintIdx, e.target.value)}
             />
           </div>
@@ -415,34 +515,15 @@ const LinearProgrammingSolver = () => {
         <button 
           onClick={solveLP}
           className="btn btn-primary"
+          disabled={isLoading}
         >
-          Solve
+          {isLoading ? 'Solving...' : 'Solve'}
         </button>
       </div>
     </div>
   );
   
-  // Render results (placeholder)
-  const renderResults = () => (
-    <div className="lp-solver-card">
-      <h2>Results</h2>
-      <p className="text-center" style={{marginBottom: '1rem'}}>This is where the solution would be displayed.</p>
-      <p className="text-center text-gray" style={{marginBottom: '1rem'}}>
-        For a complete implementation, you would need to connect this UI to a backend solver or implement the solver in JavaScript.
-      </p>
-      
-      <div className="btn-container">
-        <button 
-          onClick={() => setStep('input')}
-          className="btn btn-secondary"
-        >
-          Back to Input
-        </button>
-      </div>
-    </div>
-  );
-  
-  // Render the current step
+  // Render the current step with updated result handling
   const renderCurrentStep = () => {
     switch(step) {
       case 'setup':
@@ -450,7 +531,43 @@ const LinearProgrammingSolver = () => {
       case 'input':
         return renderInputMatrices();
       case 'result':
-        return renderResults();
+        if (isLoading) {
+          return (
+            <div className="lp-solver-card">
+              <h2>Solving Problem</h2>
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>Computing solution...</p>
+              </div>
+            </div>
+          );
+        }
+        
+        if (error) {
+          return (
+            <div className="lp-solver-card">
+              <h2>Error</h2>
+              <div className="error-message">
+                <p>An error occurred while solving the problem:</p>
+                <p>{error}</p>
+              </div>
+              <div className="btn-container">
+                <button 
+                  onClick={() => setStep('input')}
+                  className="btn btn-secondary"
+                >
+                  Back to Input
+                </button>
+              </div>
+            </div>
+          );
+        }
+        
+        if (solutionData) {
+          return renderResults(solutionData, () => setStep('input'));
+        }
+        
+        return null;
       default:
         return renderSetup();
     }

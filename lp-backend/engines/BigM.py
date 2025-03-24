@@ -62,11 +62,10 @@ def BigM(input):
         ratios[valid_rows] = tableau[:-1, -1][valid_rows] / tableau[:-1, entering][valid_rows]
         
         if np.all(ratios == np.inf):
-            print("The problem is unbounded.")
-            return [], [], None, False, None
+            return [], [], [],"The problem is unbounded."
         
         leaving = np.argmin(ratios)
-        steps.append(f"Pivot on row {leaving}, column {entering}")
+        steps.append(f"Pivot on row {basic_vars[leaving]} (leaving), column {headers[entering+1]} (entering)")
         basic_vars[leaving] = headers[entering+1]
         pivot_element = tableau[leaving, entering]
         tableau[leaving] /= pivot_element
@@ -80,11 +79,11 @@ def BigM(input):
             solution[headers.index(basic_vars[i]) - 1] = tableau[i, -1]
     
     if any(var in artificial_cal for var in range(m)):
-        print("The problem is infeasible. Artificial variables remain in the basis.")
-        return [], [], None, False, None  
+        
+        return [], [],[], "The problem is infeasible. Artificial variables remain in the basis."  
 
     optimal_value = tableau[-1, -1] if max_problem else tableau[-1, -1]
     
-    return steps, cache, [[solution[:n]]+[headers[1:-1]]], np.all(tableau[-1, :-1] >= 0 if max_problem else tableau[-1, :-1] <= 0), optimal_value
+    return steps, cache, [[solution[:n]]+[headers[1:-1]]],f"Optimization completed successfully. and z = {optimal_value}" 
 
 

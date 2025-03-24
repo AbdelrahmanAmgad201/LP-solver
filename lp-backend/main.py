@@ -31,22 +31,28 @@ def solve():
         input = {"max" : True if solver_input.optimization == "maximize" else False
                 ,"model" : tableau 
                 ,"obj_fun" : solver_input.objective.coefficients} 
-        steps, cache, solution, isOptimal, ans = BigM(input)
+        steps, cache, solution,message= BigM(input)
+        output_dto = SolverOutputDTO(
+            steps=steps,
+            cache=cache,
+            solution=solution,
+            message= message
+        )
         
     elif solver_input.method == "simplex":
         solver = SimplexSolver(tableau,
                             solver_input.objective.coefficients,
                             is_min=False if solver_input.optimization == "maximize" else True)
-        steps, cache, solution, isOptimal, ans = solver.solve()
+        steps, cache, solution ,message = solver.solve()
 
-    output_dto = SolverOutputDTO(
-        steps=steps,
-        cache=cache,
-        solution=solution,
-        is_optimal="true" if isOptimal else "false",
-        optimal_value=ans,
-        message="Solution found successfully" if isOptimal else "No optimal solution found"
-    )  
+        output_dto = SolverOutputDTO(
+            steps=steps,
+            cache=cache,
+            solution=solution,
+            message=message
+        )
+        
+        
     return jsonify(output_dto.to_dict())   
 
 

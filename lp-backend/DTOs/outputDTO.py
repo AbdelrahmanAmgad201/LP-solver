@@ -7,8 +7,6 @@ class SolverOutputDTO:
     steps: List[str]
     cache: List[List[List[object]]]
     solution:List[List[object]]
-    is_optimal: str
-    optimal_value: float
     message: str = None
 
     def to_dict(self):
