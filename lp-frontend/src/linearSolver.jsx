@@ -1,26 +1,127 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './linearSolver.css';
 
-const LinearProgrammingSolver = () => {
-  // State for method selection
-  const [method, setMethod] = useState('simplex');
+// New component for rendering tableaus
+const TableauRenderer = ({ tableau, step }) => {
+  if (!tableau || !tableau.length) return null;
   
-  // State for problem dimensions
+  return (
+    <div className="tableau-container">
+      <div className="tableau-step">
+        <span className="step-label">Step:</span> {step}
+      </div>
+      <div className="tableau-wrapper">
+        <table className="tableau-table">
+          <tbody>
+            {tableau.map((row, rowIdx) => (
+              <tr key={`row-${rowIdx}`}>
+                {row.map((cell, cellIdx) => (
+                  <td key={`cell-${rowIdx}-${cellIdx}`}>
+                    {typeof cell === 'number' ? cell.toFixed(2) : cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+// Updated renderResults function
+const renderResults = (data, onBack) => {
+  const { solution, steps, cache, message, is_optimal, optimal_value } = data;
+
+  return (
+    <div className="lp-solver-card results-card">
+      <h2>Linear Programming Solution</h2>
+      
+      {/* Solution and Status */}
+      <div className="solution-summary">
+        <div className="solution-status">
+          <h3>Solution Status:</h3>
+          <div className={`status-indicator ${is_optimal ? 'optimal' : 'non-optimal'}`}>
+            {is_optimal ? 'Optimal Solution Found' : 'Non-Optimal Solution'}
+          </div>
+          <div className="solution-message">{message}</div>
+          {optimal_value !== undefined && (
+            <div className="optimal-value">
+              Optimal Value: <strong>{optimal_value.toFixed(4)}</strong>
+            </div>
+          )}
+        </div>
+        
+        {/* Solution Variables Table */}
+        {solution && solution.length >= 2 && (
+          <div className="solution-variables">
+            <h3>Variable Values:</h3>
+            <table className="variables-table">
+              <thead>
+                <tr>
+                  {solution[0].map((varName, idx) => (
+                    <th key={`var-${idx}`}>{varName}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {solution[1].map((value, idx) => (
+                    <td key={`val-${idx}`}>{typeof value === 'number' ? value.toFixed(4) : value}</td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      
+      {/* Tableaus with Steps */}
+      {steps && steps.length > 0 && cache && cache.length > 0 && (
+        <div className="tableaus-container">
+          <h3>Solution Steps:</h3>
+          <div className="tableaus-list">
+            {steps.map((step, idx) => (
+              <TableauRenderer 
+                key={`tableau-${idx}`} 
+                tableau={cache[idx]} 
+                step={step} 
+              />
+            ))}
+          </div>
+        </div>
+      )}
+      
+      <div className="btn-container">
+        <button 
+          onClick={onBack}
+          className="btn btn-secondary"
+        >
+          Back to Input
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Updated LinearProgrammingSolver component
+const LinearProgrammingSolver = () => {
+  // Existing states...
+  const [method, setMethod] = useState('simplex');
   const [numVariables, setNumVariables] = useState(2);
   const [numConstraints, setNumConstraints] = useState(2);
   const [numGoals, setNumGoals] = useState(1);
-  
-  // State for setup step
-  const [step, setStep] = useState('setup'); // 'setup', 'input', 'result'
-  
-  // State for constraints and objective function
+  const [step, setStep] = useState('setup');
   const [constraints, setConstraints] = useState([]);
   const [objectiveFunctions, setObjectiveFunctions] = useState([]);
   const [goalConstraints, setGoalConstraints] = useState([]);
   const [isMaximize, setIsMaximize] = useState(true);
-  
-  // State for non-negative variables
   const [allNonNegative, setAllNonNegative] = useState(true);
+  
+  // New state for solution data
+  const [solutionData, setSolutionData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   // Initialize matrices when dimensions are set
   const initializeMatrices = () => {
@@ -56,6 +157,9 @@ const LinearProgrammingSolver = () => {
     
     setStep('input');
   };
+  
+  // All the existing handler functions...
+  // handleConstraintChange, handleOperatorChange, handleRhsChange, etc.
   
   // Handle constraint coefficient change
   const handleConstraintChange = (constraintIdx, varIdx, value) => {
@@ -113,8 +217,13 @@ const LinearProgrammingSolver = () => {
     setGoalConstraints(newGoalConstraints);
   };
   
-  // Solve the LP problem (placeholder)
+  // Updated solveLP function with loading states
   const solveLP = () => {
+    // Reset states
+    setIsLoading(true);
+    setError(null);
+    setSolutionData(null);
+    
     // Construct the JSON payload for the backend
     const payload = {
       method: method,
@@ -145,9 +254,6 @@ const LinearProgrammingSolver = () => {
       };
     }
     
-    // Log the payload (for testing)
-    console.log("JSON Payload for backend:", payload);
-    console.log("JSON String:", JSON.stringify(payload));
     fetch('http://127.0.0.1:5000/solve', {
       method: 'POST',
       headers: {
@@ -155,25 +261,26 @@ const LinearProgrammingSolver = () => {
       },
       body: JSON.stringify(payload),
     })
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
       .then(data => {
-        console.log('Steps:', data.steps);
-        console.log('Cache:', data.cache);
-        console.log('Solution:', data.solution);
-        console.log('Is Optimal:', data.is_optimal);
-        console.log('Optimal Value:', data.optimal_value);
-        console.log('Message:', data.message);
+        setSolutionData(data);
+        setStep('result');
       })
       .catch((error) => {
         console.error('Error:', error);
+        setError(error.message);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-      
-    
-    
-    setStep('result');
   };
   
-  // Render problem setup form
+  // Render problem setup form (existing function)
   const renderSetup = () => (
     <div className="lp-solver-card">
       <h2>Setup Linear Programming Problem</h2>
@@ -275,7 +382,7 @@ const LinearProgrammingSolver = () => {
     </div>
   );
   
-  // Render standard objective function
+  // Render standard objective function (existing function)
   const renderStandardObjective = () => (
     <div className="section-card">
       <h3>
@@ -299,7 +406,7 @@ const LinearProgrammingSolver = () => {
     </div>
   );
   
-  // Render goal programming objectives
+  // Render goal programming objectives (existing function)
   const renderGoalObjectives = () => (
     <div className="section-card">
       <h3>Goal Constraints</h3>
@@ -353,7 +460,7 @@ const LinearProgrammingSolver = () => {
     </div>
   );
   
-  // Render input matrices
+  // Render input matrices (existing function)
   const renderInputMatrices = () => (
     <div className="lp-solver-card">
       <h2>Input Linear Programming Problem</h2>
@@ -415,34 +522,15 @@ const LinearProgrammingSolver = () => {
         <button 
           onClick={solveLP}
           className="btn btn-primary"
+          disabled={isLoading}
         >
-          Solve
+          {isLoading ? 'Solving...' : 'Solve'}
         </button>
       </div>
     </div>
   );
   
-  // Render results (placeholder)
-  const renderResults = () => (
-    <div className="lp-solver-card">
-      <h2>Results</h2>
-      <p className="text-center" style={{marginBottom: '1rem'}}>This is where the solution would be displayed.</p>
-      <p className="text-center text-gray" style={{marginBottom: '1rem'}}>
-        For a complete implementation, you would need to connect this UI to a backend solver or implement the solver in JavaScript.
-      </p>
-      
-      <div className="btn-container">
-        <button 
-          onClick={() => setStep('input')}
-          className="btn btn-secondary"
-        >
-          Back to Input
-        </button>
-      </div>
-    </div>
-  );
-  
-  // Render the current step
+  // Render the current step with updated result handling
   const renderCurrentStep = () => {
     switch(step) {
       case 'setup':
@@ -450,7 +538,39 @@ const LinearProgrammingSolver = () => {
       case 'input':
         return renderInputMatrices();
       case 'result':
-        return renderResults();
+        if (isLoading) {
+          return (
+            <div className="lp-solver-card">
+              <h2>Solving Problem</h2>
+              <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <p>Computing solution...</p>
+              </div>
+            </div>
+          );
+        }
+        
+        if (error) {
+          return (
+            <div className="lp-solver-card">
+              <h2>Error</h2>
+              <div className="error-message">
+                <p>An error occurred while solving the problem:</p>
+                <p>{error}</p>
+              </div>
+              <div className="btn-container">
+                <button 
+                  onClick={() => setStep('input')}
+                  className="btn btn-secondary"
+                >
+                  Back to Input
+                </button>
+              </div>
+            </div>
+          );
+        }
+        
+        return renderResults(solutionData, () => setStep('input'));
       default:
         return renderSetup();
     }
