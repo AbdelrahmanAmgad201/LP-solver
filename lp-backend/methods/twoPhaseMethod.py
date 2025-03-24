@@ -6,11 +6,11 @@ class TwoPhaseMethod:
     def solve(tableau, solver_input):
         msg, steps, tableaus = TwoPhaseMethod.phase_one(tableau)
         if msg == "optimal":
-            z = TableauBuilder.build_objective(tableau, solver_input)
-            msg, steps2, tableaus2 = TwoPhaseMethod.phase_two(tableau, z)
+            z = TableauBuilder.build_objective(tableaus[-1], solver_input)
+            msg, steps2, tableaus2 = TwoPhaseMethod.phase_two(tableaus[-1], z)
             steps += steps2
             tableaus += tableaus2
-        return msg, steps, tableaus
+        return steps, tableaus, [Simplex.get_solution(tableaus[-1])], msg
 
     @staticmethod
     def create_r(tableau):
@@ -74,12 +74,11 @@ class TwoPhaseMethod:
         steps.append("making tableau consistent")
         tableaus.append(TwoPhaseMethod.combine_tableau_objective(tableau, zs))
 
-        while (True):
+        msg = None
+        while (msg == None):
             msg, step = Simplex.iterate_once(tableau, zs)
             steps.append(step)
             tableaus.append(TwoPhaseMethod.combine_tableau_objective(tableau, zs))
-            if msg != None:
-                break
 
         return msg, steps, tableaus
 

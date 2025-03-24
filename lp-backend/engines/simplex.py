@@ -82,19 +82,20 @@ class Simplex:
 
     @staticmethod
     def iterate_once(tableau, zs):
+        step = ""
         if Simplex.check_unbounded(tableau, zs):
-            return "unbounded"
+            return "unbounded", step
         
         enter_var_idx = Simplex.get_entering_var(zs)
         if enter_var_idx == -1:
             if Simplex.check_infeasible(tableau):
-                return "infeasible"
-            return "optimal"
+                return "infeasible", step
+            return "optimal", step
         
         leave_var_idx = Simplex.get_leaving_var(tableau, enter_var_idx)
         # this condition should result in true
         if leave_var_idx == -1:
-            return "unbounded"
+            return "unbounded", step
         
         step = f'Entering variable: {tableau[0][enter_var_idx]}, Leaving variable: {tableau[leave_var_idx][0]}'
         tableau[leave_var_idx][0] = tableau[0][enter_var_idx]
@@ -108,3 +109,18 @@ class Simplex:
                 msg = "infeasible"
             msg = "optimal"
         return msg, step
+
+    @staticmethod
+    def get_solution(tableau):
+        sol = [[], []]
+        for i in range(1, len(tableau[0])):
+            sol[0].append(tableau[0][i])
+            sol[1].append(0)
+
+        for i in range(1, len(tableau)):
+            for search in range(len(sol[0])):
+                if sol[0][search] == tableau[i][0]:
+                    sol[1][search] = tableau[i][-1]
+                    break
+
+        return sol

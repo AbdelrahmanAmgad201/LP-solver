@@ -39,11 +39,11 @@ class TableauBuilder:
     def build_objective(tableau, solver_input):
         sign = (1 if solver_input.optimization == "minimize" else -1)
         obj_fun = ['z']
-        for i in solver_input.objectives[0].coefficients:
+        for i in solver_input.objective.coefficients:
             # -1 to make all variables LHS and sign is to turn maximize problems into minimize
             obj_fun.append(i * -1 * sign)
         
-        for i in range(len(solver_input.objectives[0].coefficients)+1, len(tableau[0])):
+        for i in range(len(solver_input.objective.coefficients)+1, len(tableau[0])):
             obj_fun.append(0)
 
         return obj_fun
