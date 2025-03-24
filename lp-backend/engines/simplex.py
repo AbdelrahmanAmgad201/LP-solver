@@ -20,15 +20,19 @@ class Simplex:
     def get_entering_var(zs):
         x = -1
         mx = Simplex.EPSILON
-        dropped_cols = []
-        for z in zs:
-            for i in range(1, len(z)-1):
-                if (i not in dropped_cols) and z[i] < -Simplex.EPSILON:
-                    dropped_cols.append(i)
+        dropped_cols = [[]]
+
+        for i in range(1, len(zs)):
+            dropped_cols.append([])
+            for j in range(1, len(zs[i])-1):
+                for z in range(i):
+                    if zs[z][j] < -Simplex.EPSILON:
+                        dropped_cols[-1].append(j)
+                        break
 
         for z in range(len(zs)):
             for i in range(1, len(zs[z])-1):
-                if zs[z][i] > mx and (i not in dropped_cols):
+                if zs[z][i] > mx and (i not in dropped_cols[z]):
                     mx = zs[z][i]
                     x = i
             if x != -1: return x
@@ -107,7 +111,7 @@ class Simplex:
         if enter_var_idx == -1:
             if Simplex.check_infeasible(tableau):
                 msg = "infeasible"
-            msg = "optimal"
+            else: msg = "optimal"
         return msg, step
 
     @staticmethod
