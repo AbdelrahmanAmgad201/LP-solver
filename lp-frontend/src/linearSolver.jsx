@@ -204,70 +204,87 @@ const LinearProgrammingSolver = () => {
     setGoalConstraints(newGoalConstraints);
   };
   
-  // Solve the linear programming problem
-  const solveLP = () => {
-    // Reset states
-    setIsLoading(true);
-    setError(null);
-    setSolutionData(null);
-    
-    // Construct the JSON payload for the backend
-    const payload = {
-      method: method,
-      numVariables: numVariables,
-      numConstraints: numConstraints,
-      allNonNegative: allNonNegative,
-      constraints: constraints.map(constraint => ({
-        coefficients: [...constraint.coefficients],
-        operator: constraint.operator,
-        rhs: constraint.rhs
-      }))
-    };
-    
-    if (method === 'goalProgramming') {
-      // Add goal programming specific data
-      payload.numGoals = numGoals;
-      payload.goals = goalConstraints.map(goal => ({
-        coefficients: [...goal.coefficients],
-        operator: goal.operator,
-        rhs: goal.rhs,
-        priority: goal.priority
-      }));
-    } else {
-      // Add standard objective function data
-      payload.optimization = isMaximize ? 'maximize' : 'minimize';
-      payload.objective = {
-        coefficients: [...objectiveFunctions[0].coefficients]
-      };
-    }
-    
-    fetch('http://127.0.0.1:5000/solve', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        return response.json();
-      })
-      .then(data => {
-        console.log('Solution data:', data);
-        setSolutionData(data);
-        setStep('result');
-      })
-      .catch((error) => {
-        console.error('Error:', error);
-        setError(error.message);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+// Solve the linear programming problem
+const solveLP = () => {
+  // Reset states
+  setIsLoading(true);
+  setError(null);
+  setSolutionData(null);
+  
+  // Construct the JSON payload for the backend
+  const payload = {
+    method: method,
+    numVariables: numVariables,
+    numConstraints: numConstraints,
+    allNonNegative: allNonNegative,
+    constraints: constraints.map(constraint => ({
+      coefficients: [...constraint.coefficients],
+      operator: constraint.operator,
+      rhs: constraint.rhs
+    }))
   };
   
+  if (method === 'goalProgramming') {
+    // Add goal programming specific data
+    payload.numGoals = numGoals;
+    payload.goals = goalConstraints.map(goal => ({
+      coefficients: [...goal.coefficients],
+      operator: goal.operator,
+      rhs: goal.rhs,
+      priority: goal.priority
+    }));
+  } else {
+    // Add standard objective function data
+    payload.optimization = isMaximize ? 'maximize' : 'minimize';
+    payload.objective = {
+      coefficients: [...objectiveFunctions[0].coefficients]
+    };
+  }
+  
+  // Use the appropriate URL when running in Docker
+  // This will work both in development and in Docker
+  const apiUrl = process.env.NODE_ENV === 'production' 
+    ? 'http://lp-backend:5000/solve'  // Service name in docker-compose for container-to-container
+    : 'http://localhost:5000/solve';  // For local development
+  
+  console.log(`Sending request to: ${apiUrl}`);
+  console.log('Payload:', payload);
+  
+  fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(payload),
+  })
+    .then(response => {
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        return response.json()
+          .then(errorData => {
+            throw new Error(`Server error: ${errorData.error || response.statusText}`);
+          })
+          .catch(() => {
+            throw new Error(`Server error: ${response.status} ${response.statusText}`);
+          });
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Solution data:', data);
+      setSolutionData(data);
+      setStep('result');
+    })
+    .catch((error) => {
+      console.error('Error:', error);
+      setError(error.message);
+    })
+    .finally(() => {
+      setIsLoading(false);
+    });
+};
   // Render problem setup form
   const renderSetup = () => (
     <div className="lp-solver-card">

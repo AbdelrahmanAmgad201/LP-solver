@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  lp-backend:
+    build: ./lp-backend
+    ports:
+      - "5000:5000"
+    networks:
+      - lp-network
+    volumes:
+      - ./lp-backend:/app
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+
+  lp-frontend:
+    build: ./lp-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - lp-backend
+    networks:
+      - lp-network
+    volumes:
+      - ./lp-frontend:/app
+      - /app/node_modules
+
+networks:
+  lp-network:
+    driver: bridge
