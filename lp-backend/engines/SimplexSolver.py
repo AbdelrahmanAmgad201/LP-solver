@@ -31,11 +31,10 @@ class SimplexSolver:
             ratios[valid_rows] = self.tableau[:-1, -1][valid_rows] / self.tableau[:-1, entering][valid_rows]
             
             if np.all(ratios == np.inf):
-                print("The problem is unbounded.")
-                return [], [], None, False, None
+                return [], [], [],"The problem is unbounded."
             
             leaving = np.argmin(ratios)
-            self.steps.append(f"Pivot on row {leaving}, column {entering}")
+            self.steps.append(f"Pivot on row {self.basic_vars[leaving]} (leaving), column {self.headers[entering+1]} (entering)")
             self.basic_vars[leaving] = self.headers[entering + 1]
             pivot_element = self.tableau[leaving, entering]
             self.tableau[leaving] /= pivot_element
@@ -50,8 +49,8 @@ class SimplexSolver:
         
         optimal_value = self.tableau[-1, -1]
         
-        return self.steps, cache, [[solution[:-1]] + [self.headers[1:-1]]], np.all(self.tableau[-1, :-1] >= 0 if not self.is_min else self.tableau[-1, :-1] <= 0), optimal_value
-
+        return self.steps, cache, [[solution[:-1]] + [self.headers[1:-1]]], f"Optimization completed successfully. and z = {optimal_value}"
+        
 
 
 
