@@ -112,7 +112,7 @@ class TableauBuilder:
             for j in range(1, len(tableau[0])):
                 op = solver_input.goals[i].operator
                 var = tableau[0][j]
-                z.append(-1 if (op == ">=" and var == f'u{i+1}') or (op == "<=" and var == f'e{i+1}') else 0)
+                z.append(-1 if ((op == ">=" or op == "=") and var == f'u{i+1}') or ((op == "<=" or op == "=") and var == f'e{i+1}') else 0)
             objectives.append(z)
         return objectives
                     
