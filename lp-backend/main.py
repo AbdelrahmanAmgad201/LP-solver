@@ -17,9 +17,10 @@ CORS(app)
 def solve():
     json_data = request.get_json()
     json_str = json.dumps(json_data)
-    print(json_str)
+    
 
     solver_input = LinearSolverInput.from_json(json_str)
+    
     tableau = TableauBuilder.build_tableau(solver_input)
     steps = cache = solution = message = None
 

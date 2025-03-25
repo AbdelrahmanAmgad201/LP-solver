@@ -28,13 +28,13 @@ def BigM(input):
     for i in range(len(obj_fun)):
         C_ext[i] = obj_fun[i]
     
-    # Assign penalty to artificial variables
+    
     for i, var in enumerate(var_names):
         if var.startswith("a"):
-            C_ext[i] = -M if max_problem else M  # Artificial variable
+            C_ext[i] = -M if max_problem else M  
     
-    if  not max_problem:
-        C_ext = -C_ext
+   
+    C_ext = -C_ext
     
     tableau = np.zeros((m + 1, A.shape[1] + 1))
     tableau[:-1, :-1] = A
@@ -42,7 +42,7 @@ def BigM(input):
     tableau[-1, :-1] = C_ext
     
     
-    # Apply Big-M penalty to artificial variables
+    
     for i in artificial_vars:
         tableau[-1] -= M * tableau[i] if max_problem else -M * tableau[i]
     
@@ -51,16 +51,16 @@ def BigM(input):
     
     basic_vars.append("z")
     while True:
-        
+        print(tableau)
         cache.append([headers] + [ [basic_vars[i]]+list(tableau[i]) for i in range(len(tableau))])
         if np.all(tableau[-1, :-1] >= 0 if max_problem else tableau[-1, :-1] <= 0):
             break
-
+        
         entering = np.argmin(tableau[-1, :-1]) if max_problem else np.argmax(tableau[-1, :-1])
         valid_rows = tableau[:-1, entering] > 0
         ratios = np.full_like(tableau[:-1, -1], np.inf, dtype=float)
         ratios[valid_rows] = tableau[:-1, -1][valid_rows] / tableau[:-1, entering][valid_rows]
-        
+        print(ratios)
         if np.all(ratios == np.inf):
             return [], [], [],"The problem is unbounded."
         

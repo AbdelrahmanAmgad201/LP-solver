@@ -8,10 +8,11 @@ class TableauBuilder:
         if solver_input.all_non_negative:
             for i in range(solver_input.num_variables):
                 tableau[0].append(f'x{i+1}')
-                sign = 1
-                if solver_input.constraints[i].rhs < 0:
-                    sign = -1
+                
                 for j in range(solver_input.num_constraints):
+                    sign = 1
+                    if solver_input.constraints[j].rhs < 0:
+                        sign = -1
                     tableau[j+1].append(solver_input.constraints[j].coefficients[i] * sign)
         else:
             for i in range(solver_input.num_variables):
@@ -50,8 +51,10 @@ class TableauBuilder:
                     tableau[j+1].append(1 if i == j else 0)
 
         tableau[0].append("sol")
-        for i in range(solver_input.num_constraints):
+        
+        for i in range(len(solver_input.constraints)):
             sign = 1
+
             if solver_input.constraints[i].rhs < 0:
                 sign = -1
             tableau[i+1].append(solver_input.constraints[i].rhs * sign)
