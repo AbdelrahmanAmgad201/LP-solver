@@ -7,7 +7,8 @@ class TwoPhaseMethod:
         msg, steps, tableaus = TwoPhaseMethod.phase_one(tableau)
         if msg == "optimal":
             z = TableauBuilder.build_objective(tableaus[-1], solver_input)
-            msg, steps2, tableaus2 = TwoPhaseMethod.phase_two(tableaus[-1], z)
+            tableau = tableaus[-1][0:1] + tableaus[-1][2:]
+            msg, steps2, tableaus2 = TwoPhaseMethod.phase_two(tableau, z)
             steps += steps2
             tableaus += tableaus2
         return steps, tableaus, [Simplex.get_solution(tableaus[-1])], msg
@@ -45,12 +46,11 @@ class TwoPhaseMethod:
         steps.append("making tableau consistent")
         tableaus.append(TwoPhaseMethod.combine_tableau_objective(tableau, r))
 
-        while (True):
+        msg = None
+        while (msg == None):
             msg, step = Simplex.iterate_once(tableau, r)
             steps.append(step)
             tableaus.append(TwoPhaseMethod.combine_tableau_objective(tableau, r))
-            if msg != None:
-                break
 
         if msg == "optimal":
             # remove artificial variable columns
