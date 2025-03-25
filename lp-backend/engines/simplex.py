@@ -118,7 +118,7 @@ class Simplex:
     @staticmethod
     def get_solution(tableau):
         sol = [[], []]
-        for i in range(1, len(tableau[0])):
+        for i in range(1, len(tableau[0])-1):
             sol[0].append(tableau[0][i])
             sol[1].append(0)
 

@@ -44,7 +44,7 @@ class LinearSolverInput:
         self, method: str, num_variables: int, num_constraints: int,
         num_goals: Optional[int] = None, optimization: Optional[str] = None, 
         constraints: Optional[List[Constraint]] = None, objective: Optional[Objective] = None, 
-        goals: Optional[List[Goal]] = None
+        goals: Optional[List[Goal]] = None, all_non_negative: Optional[bool] = None
     ):
         self.method = method or ""
         self.num_variables = num_variables or 0
@@ -54,6 +54,7 @@ class LinearSolverInput:
         self.constraints = constraints or []
         self.objective = objective or Objective([])
         self.goals = goals or []
+        self.all_non_negative = all_non_negative if all_non_negative is not None else False
 
     @classmethod
     def from_json(cls, json_str: str):
@@ -71,5 +72,6 @@ class LinearSolverInput:
             optimization=data.get("optimization", ""),
             constraints=constraints,
             objective=objective,
-            goals=goals
+            goals=goals,
+            all_non_negative=data.get("allNonNegative", False)
         )
