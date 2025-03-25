@@ -15,6 +15,10 @@ class M_Method:
         steps.append("creating tableau")
         tableaus.append(Simplex.combine_tableau_objective(tableau, zs))
 
+        Simplex.make_consistent(tableau, zs)
+        steps.append("making tableau consistent")
+        tableaus.append(Simplex.combine_tableau_objective(tableau, zs))
+
         while (msg == None):
             msg, step = Simplex.iterate_once(tableau, zs)
             steps.append(step)
@@ -32,6 +36,10 @@ class M_Method:
     @staticmethod
     def m_method_objective(tableau, zs):
         m = max(zs[0][1:]) * 100
-        for i in range(1, len(tableau)-1):
+        print(m)
+        print(tableau)
+        for i in range(1, len(tableau[0])-1):
+            print(tableau[0][i])
             if tableau[0][i][0] == 'a':
-                zs[0][i] = m
+                print(zs[0][i])
+                zs[0][i] = -m
