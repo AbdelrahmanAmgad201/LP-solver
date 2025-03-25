@@ -1,3 +1,5 @@
+import copy
+
 class Simplex:
     EPSILON = 1e-15  # Tolerance for floating-point comparisons
     # zs is the array of objectives
@@ -135,3 +137,14 @@ class Simplex:
             if tableau[i][0][0] == 'a':
                 return True
         return False
+    
+    @staticmethod
+    def combine_tableau_objective(tableau, zs):
+        return copy.deepcopy(tableau[:1]) + copy.deepcopy(zs) + copy.deepcopy(tableau[1:])
+    
+    @staticmethod
+    def fix_z_sign(tableaus):
+        for i in range(len(tableaus)):
+            for j in range(1, len(tableaus[i][0])):
+                if( tableaus[i][1][0] != 'r'):
+                    tableaus[i][1][j] *= -1

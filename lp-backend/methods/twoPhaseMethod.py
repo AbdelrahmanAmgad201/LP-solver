@@ -1,4 +1,5 @@
 from engines.simplex import Simplex
+from resources.builders import feedback_message
 from resources.tableauBuilder import TableauBuilder
 import copy
 class TwoPhaseMethod:
@@ -15,8 +16,11 @@ class TwoPhaseMethod:
 
             if solver_input.optimization == "maximize":
                 TwoPhaseMethod.fix_z_sign(tableaus)
+            
+            msg += feedback_message(tableaus[-1], solver_input)
 
-        return steps, tableaus, [Simplex.get_solution(tableaus[-1])], msg
+        type_msg = "Two Phase Method (" + solver_input.optimization + "): "
+        return steps, tableaus, [Simplex.get_solution(tableaus[-1])], type_msg + msg
 
     @staticmethod
     def create_r(tableau):
@@ -101,3 +105,5 @@ class TwoPhaseMethod:
             for j in range(1, len(tableaus[i][0])):
                 if( tableaus[i][1][0] != 'r'):
                     tableaus[i][1][j] *= -1
+
+    

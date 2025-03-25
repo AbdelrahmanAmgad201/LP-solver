@@ -1,5 +1,6 @@
 from engines.simplex import Simplex
 from resources.tableauBuilder import TableauBuilder
+from resources.builders import feedback_message_goalProgramming
 from methods.twoPhaseMethod import TwoPhaseMethod
 import copy
 
@@ -32,7 +33,10 @@ class GoalProgrammingMethod:
                 msg, step = Simplex.iterate_once(tableau, objectives)
                 steps.append(step)
                 tableaus.append(GoalProgrammingMethod.combine_tableau_objective(tableau, objectives))
+            
+            msg += feedback_message_goalProgramming(tableaus[-1], solver_input)
 
+        msg = "Goal Programming: " + msg
         return steps, tableaus, [Simplex.get_solution(tableaus[-1])], msg
     
     @staticmethod
