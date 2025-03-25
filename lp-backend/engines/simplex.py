@@ -60,7 +60,6 @@ class Simplex:
     
     @staticmethod
     def make_consistent(tableau, zs):
-        print(tableau)
         for row in range(1, len(tableau)):
             col = -1
             for i in range(len(tableau[0])):

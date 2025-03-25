@@ -6,11 +6,16 @@ class TwoPhaseMethod:
     def solve(tableau, solver_input):
         msg, steps, tableaus = TwoPhaseMethod.phase_one(tableau)
         if msg == "optimal":
-            z = TableauBuilder.build_objective(tableaus[-1], solver_input)
-            tableau = tableaus[-1][0:1] + tableaus[-1][2:]
+            if len(tableaus) > 0:
+                tableau = tableaus[-1][0:1] + tableaus[-1][2:]
+            z = TableauBuilder.build_objective(tableau, solver_input)
             msg, steps2, tableaus2 = TwoPhaseMethod.phase_two(tableau, z)
             steps += steps2
             tableaus += tableaus2
+
+            if solver_input.optimization == "maximize":
+                TwoPhaseMethod.fix_z_sign(tableaus)
+
         return steps, tableaus, [Simplex.get_solution(tableaus[-1])], msg
 
     @staticmethod
@@ -36,6 +41,9 @@ class TwoPhaseMethod:
     def phase_one(tableau):
         steps = []
         tableaus = []
+        
+        if not Simplex.detect_artificial_variable(tableau):
+            return "optimal", steps, tableaus
 
         # create r = sum of artifitial variables
         r = [TwoPhaseMethod.create_r(tableau)]
@@ -86,3 +94,10 @@ class TwoPhaseMethod:
     @staticmethod
     def combine_tableau_objective(tableau, zs):
         return copy.deepcopy(tableau[:1]) + copy.deepcopy(zs) + copy.deepcopy(tableau[1:])
+    
+    @staticmethod
+    def fix_z_sign(tableaus):
+        for i in range(len(tableaus)):
+            for j in range(1, len(tableaus[i][0])):
+                if( tableaus[i][1][0] != 'r'):
+                    tableaus[i][1][j] *= -1

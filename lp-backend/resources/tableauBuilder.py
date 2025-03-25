@@ -85,23 +85,35 @@ class TableauBuilder:
             for i in range(solver_input.num_variables):
                 tableau[0].append(f'x{i+1}')
                 for j in range(1, solver_input.num_goals+1):
-                    tableau[j].append(solver_input.goals[j-1].coefficients[i])
+                    sign = -1 if solver_input.goals[j-1].rhs < 0 else 1
+                    tableau[j].append(solver_input.goals[j-1].coefficients[i] * sign)
 
                 for j in range(solver_input.num_goals + 1, solver_input.num_goals + solver_input.num_constraints + 1):
-                    tableau[j].append(solver_input.constraints[j - solver_input.num_goals - 1].coefficients[i])
+                    sign = -1 if solver_input.constraints[j - solver_input.num_goals - 1].rhs < 0 else 1
+                    tableau[j].append(solver_input.constraints[j - solver_input.num_goals - 1].coefficients[i] * sign)
         else:
             for i in range(solver_input.num_variables):
                 tableau[0].append(f'x{i+1}+')
                 tableau[0].append(f'x{i+1}-')
                 for j in range(1, solver_input.num_goals+1):
-                    tableau[j].append(solver_input.goals[j-1].coefficients[i])
-                    tableau[j].append(-solver_input.goals[j-1].coefficients[i])
+                    sign = -1 if solver_input.goals[j-1].rhs < 0 else 1
+                    tableau[j].append(solver_input.goals[j-1].coefficients[i]  * sign)
+                    tableau[j].append(-solver_input.goals[j-1].coefficients[i] * sign)
 
                 for j in range(solver_input.num_goals + 1, solver_input.num_goals + solver_input.num_constraints + 1):
-                    tableau[j].append(solver_input.constraints[j - solver_input.num_goals - 1].coefficients[i])
-                    tableau[j].append(-solver_input.constraints[j - solver_input.num_goals - 1].coefficients[i])
+                    sign = -1 if solver_input.constraints[j - solver_input.num_goals - 1].rhs < 0 else 1
+                    tableau[j].append(solver_input.constraints[j - solver_input.num_goals - 1].coefficients[i] * sign)
+                    tableau[j].append(-solver_input.constraints[j - solver_input.num_goals - 1].coefficients[i] * sign)
 
         for i in range(solver_input.num_goals):
+            operator = solver_input.goals[i].operator
+            if solver_input.goals[i].rhs < 0:
+                if operator == "<=":
+                    operator = ">="
+                elif operator == ">=":
+                    operator = "<="
+                solver_input.goals[i].operator = operator
+
             tableau[0].append(f'u{i+1}')
             tableau[0].append(f'e{i+1}')
             for j in range(1, len(tableau)):
@@ -115,6 +127,13 @@ class TableauBuilder:
 
         for i in range(solver_input.num_constraints):
             operator = solver_input.constraints[i].operator
+            if solver_input.constraints[i].rhs < 0:
+                if operator == "<=":
+                    operator = ">="
+                elif operator == ">=":
+                    operator = "<="
+                solver_input.constraints[i].operator = operator
+
             if (operator == "<="):
                 tableau[0].append(f'u{solver_input.num_goals + i + 1}')
                 tableau[solver_input.num_goals + i + 1][0] = f'u{solver_input.num_goals + i + 1}'
@@ -135,10 +154,10 @@ class TableauBuilder:
         tableau[0].append("sol")
         i = 1
         for j in solver_input.goals:
-            tableau[i].append(j.rhs)
+            tableau[i].append(abs(j.rhs))
             i += 1
         for j in solver_input.constraints:
-            tableau[i].append(j.rhs)
+            tableau[i].append(abs(j.rhs))
             i += 1
 
         return tableau
